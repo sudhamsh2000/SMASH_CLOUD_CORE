@@ -1,4 +1,4 @@
-import { User } from "lucide-react";
+import { User as UserIcon } from "lucide-react";
 
 export default function TopBar() {
   return (
@@ -28,7 +28,7 @@ export default function TopBar() {
           alignItems: 'center', 
           justifyContent: 'center' 
         }}>
-          <User className="w-5 h-5" style={{ color: 'white' }} />
+          <UserIcon className="w-5 h-5" style={{ color: 'white' }} />
         </div>
       </div>
     </div>

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Send, Bot, User } from "lucide-react";
+import { Send, Bot, User as UserIcon } from "lucide-react";
 import { ChatMessage, getRandomResponse } from "../lib/mock";
 
 export default function AiConsole() {
@@ -93,7 +93,7 @@ export default function AiConsole() {
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
                   {message.isUser ? (
-                    <User style={{ width: '12px', height: '12px' }} />
+                    <UserIcon style={{ width: '12px', height: '12px' }} />
                   ) : (
                     <Bot style={{ width: '12px', height: '12px' }} />
                   )}
