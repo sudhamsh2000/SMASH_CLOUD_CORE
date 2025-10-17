@@ -1,0 +1,65 @@
+# SMASH Cloud Core - Caddy Configuration
+# Provides HTTPS with internal CA and reverse proxy to Nextcloud PHP-FPM
+
+{
+    # Enable internal CA for local development
+    local_certs
+}
+
+# Main Nextcloud site
+localhost {
+    # Use internal TLS certificate
+    tls internal
+    
+    # Reverse proxy to Nextcloud PHP-FPM
+    reverse_proxy nextcloud:9000 {
+        # Add required headers for Nextcloud
+        header_up Host {host}
+        header_up X-Real-IP {remote}
+        header_up X-Forwarded-For {remote}
+        header_up X-Forwarded-Proto {scheme}
+    }
+    
+    # Security headers
+    header {
+        # Prevent clickjacking
+        X-Frame-Options "SAMEORIGIN"
+        # Prevent MIME type sniffing
+        X-Content-Type-Options "nosniff"
+        # Enable XSS protection
+        X-XSS-Protection "1; mode=block"
+        # Referrer policy
+        Referrer-Policy "strict-origin-when-cross-origin"
+        # Remove server header
+        -Server
+    }
+    
+    # Logging
+    log {
+        output file /var/log/caddy/access.log
+        format single_field common_log
+    }
+}
+
+# Optional: Production domain (uncomment when deploying)
+# ${SMASH_DOMAIN} {
+#     tls {
+#         # Let's Encrypt will be handled by Certbot in production
+#         # This is just for reference
+#     }
+#     
+#     reverse_proxy nextcloud:9000 {
+#         header_up Host {host}
+#         header_up X-Real-IP {remote}
+#         header_up X-Forwarded-For {remote}
+#         header_up X-Forwarded-Proto {scheme}
+#     }
+#     
+#     header {
+#         X-Frame-Options "SAMEORIGIN"
+#         X-Content-Type-Options "nosniff"
+#         X-XSS-Protection "1; mode=block"
+#         Referrer-Policy "strict-origin-when-cross-origin"
+#         -Server
+#     }
+# }

@@ -1,0 +1,18 @@
+[Unit]
+Description=SMASH Cloud Display Dashboard
+After=network.target
+
+[Service]
+Type=simple
+User=smash
+ExecStart=/usr/bin/python3 /opt/smash/scripts/smash_display.py
+Restart=always
+RestartSec=5
+StandardOutput=tty
+StandardError=tty
+TTYPath=/dev/tty1
+
+[Install]
+WantedBy=multi-user.target
+
+

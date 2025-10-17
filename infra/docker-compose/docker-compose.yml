@@ -1,0 +1,80 @@
+# SMASH Cloud Core - Local Development Stack
+# Run: docker compose up -d
+# Access: https://localhost (trust local CA)
+
+version: '3.8'
+
+services:
+  # MariaDB Database
+  mariadb:
+    image: mariadb:11
+    container_name: smash-mariadb
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${SMASH_DB_ROOT}
+      MYSQL_DATABASE: ${SMASH_DB_NAME}
+      MYSQL_USER: ${SMASH_DB_USER}
+      MYSQL_PASSWORD: ${SMASH_DB_PASS}
+    volumes:
+      - mariadb_data:/var/lib/mysql
+    networks:
+      - smash_network
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+
+  # Nextcloud PHP-FPM
+  nextcloud:
+    image: nextcloud:29-fpm
+    container_name: smash-nextcloud
+    restart: unless-stopped
+    environment:
+      MYSQL_HOST: mariadb
+      MYSQL_DATABASE: ${SMASH_DB_NAME}
+      MYSQL_USER: ${SMASH_DB_USER}
+      MYSQL_PASSWORD: ${SMASH_DB_PASS}
+      NEXTCLOUD_ADMIN_USER: ${SMASH_ADMIN_USER}
+      NEXTCLOUD_ADMIN_PASSWORD: ${SMASH_ADMIN_PASS:-smash123}
+      NEXTCLOUD_TRUSTED_DOMAINS: localhost ${SMASH_DOMAIN}
+      NEXTCLOUD_DATA_DIR: /var/www/html/data
+    volumes:
+      - nextcloud_data:/var/www/html/data
+      - nextcloud_apps:/var/www/html/custom_apps
+      - nextcloud_config:/var/www/html/config
+    depends_on:
+      - mariadb
+    networks:
+      - smash_network
+
+  # Caddy Reverse Proxy & TLS
+  caddy:
+    image: caddy:2
+    container_name: smash-caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - nextcloud
+    networks:
+      - smash_network
+
+volumes:
+  mariadb_data:
+    driver: local
+  nextcloud_data:
+    driver: local
+  nextcloud_apps:
+    driver: local
+  nextcloud_config:
+    driver: local
+  caddy_data:
+    driver: local
+  caddy_config:
+    driver: local
+
+networks:
+  smash_network:
+    driver: bridge
