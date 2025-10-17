@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Page</title>
+    <style>
+        body {
+            margin: 0;
+            font-family: 'Inter', system-ui, sans-serif;
+            background: linear-gradient(135deg, #0A0F1E 0%, #1a1f2e 100%);
+            color: white;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        h1 {
+            font-size: 48px;
+            margin: 0 0 20px 0;
+            color: #00FFFF;
+        }
+        p {
+            font-size: 18px;
+            margin: 0 0 30px 0;
+            opacity: 0.8;
+        }
+        .card {
+            background: rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            padding: 24px;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>☁️ SMASH Cloud Dashboard</h1>
+    <p>Your personal cloud is now running!</p>
+    
+    <div class="card">
+        <h3>CPU Usage</h3>
+        <div style="font-size: 32px; font-weight: bold; color: #ef4444;">45%</div>
+    </div>
+    
+    <div class="card">
+        <h3>Memory Usage</h3>
+        <div style="font-size: 32px; font-weight: bold; color: #3b82f6;">67%</div>
+    </div>
+    
+    <div class="card">
+        <h3>Disk Usage</h3>
+        <div style="font-size: 32px; font-weight: bold; color: #8b5cf6;">23%</div>
+    </div>
+</body>
+</html>

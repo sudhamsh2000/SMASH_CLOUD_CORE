@@ -11,8 +11,8 @@ localhost {
     # Use internal TLS certificate
     tls internal
     
-    # Reverse proxy to Nextcloud PHP-FPM
-    reverse_proxy nextcloud:9000 {
+    # Reverse proxy to Nextcloud Apache
+    reverse_proxy nextcloud:80 {
         # Add required headers for Nextcloud
         header_up Host {host}
         header_up X-Real-IP {remote}
@@ -37,7 +37,6 @@ localhost {
     # Logging
     log {
         output file /var/log/caddy/access.log
-        format single_field common_log
     }
 }
 
