@@ -1770,7 +1770,7 @@ export default function App() {
             <FileManager />
           ) : currentView === 'ai' ? (
             <div style={{ flex: 1, height: '100%' }}>
-              <AiConsole />
+              <AiConsole defaultView="training" />
             </div>
           ) : currentView === 'settings' ? (
             <div style={{ flex: 1, height: '100%' }}>
@@ -1836,13 +1836,13 @@ export default function App() {
               <StoragePie diskUsed={stats.disk} />
             </motion.div>
 
-            {/* AI Console */}
+            {/* AI Console - Dashboard View (Chat Mode) */}
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ duration: 0.5, delay: 0.4 }}
             >
-              <AiConsole />
+              <AiConsole defaultView="chat" />
             </motion.div>
 
             {/* System Status */}

@@ -1,0 +1,12 @@
+This is a test file for SMASH Cloud real-time database demonstration.
+
+Features being tested:
+- Real-time file upload
+- Database persistence
+- File metadata tracking
+- Upload progress indication
+- File type detection
+- MIME type recognition
+
+Uploaded at: 2025-10-17
+Test successful! ✅

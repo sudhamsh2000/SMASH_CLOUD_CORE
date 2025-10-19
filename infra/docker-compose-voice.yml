@@ -1,0 +1,83 @@
+version: "3.9"
+
+services:
+  # SMASH Voice AI Backend
+  smash-voice-api:
+    build:
+      context: ../smash_core
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - ELEVENLABS_API_KEY=${ELEVENLABS_API_KEY:-}
+      - OLLAMA_HOST=http://ollama:11434
+      - WHISPER_HOST=http://whisper:9000
+      - PIPER_HOST=http://piper:5002
+      - ASSISTANT_NAME=SMASH
+      - VOICE_MODE=jarvis
+      - VOICE_ID=${VOICE_ID:-en_GB-sarah-high}
+      - JARVIS_STARTUP_LINE=System online. Hello Sudhamsh, SMASH Cloud is now active.
+      - DATABASE_URL=sqlite:///./smash_ai.db
+    volumes:
+      - ../smash_core:/app
+      - voice_static:/app/static
+      - voice_db:/app/data
+    depends_on:
+      - ollama
+      - whisper
+      - piper
+    networks:
+      - smash-network
+    restart: unless-stopped
+
+  # Ollama for local LLM
+  ollama:
+    image: ollama/ollama:latest
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    networks:
+      - smash-network
+    restart: unless-stopped
+    environment:
+      - OLLAMA_HOST=0.0.0.0
+
+  # Whisper for Speech-to-Text
+  whisper:
+    image: ghcr.io/ggerganov/whisper.cpp:server
+    command:
+      - "-m"
+      - "base.en"
+      - "-l"
+      - "en"
+      - "-t"
+      - "4"
+      - "-p"
+      - "9000"
+    ports:
+      - "9000:9000"
+    networks:
+      - smash-network
+    restart: unless-stopped
+
+  # Piper for Text-to-Speech
+  piper:
+    image: rhasspy/wyoming-piper:latest
+    environment:
+      - PIPER_VOICE=${VOICE_ID:-en_GB-sarah-high}
+    ports:
+      - "5002:5002"
+    networks:
+      - smash-network
+    restart: unless-stopped
+
+volumes:
+  voice_static:
+  voice_db:
+  ollama_data:
+
+networks:
+  smash-network:
+    driver: bridge
