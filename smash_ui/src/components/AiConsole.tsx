@@ -1,8 +1,11 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Bot, Send, User as UserIcon, Volume2, VolumeX, BookOpen, Trash2 } from 'lucide-react';
+import { Bot, Send, User as UserIcon, Volume2, VolumeX, BookOpen, Trash2, Settings } from 'lucide-react';
 import VoiceMicButton from './VoiceMicButton';
 import { smashBeta1AI, type AITrainingData } from '../lib/aiService';
+import { realAI } from '../lib/realAI';
+import { elevenLabsService } from '../lib/elevenLabsService';
+import { getVoiceConfig, isElevenLabsConfigured } from '../lib/voiceConfig';
 
 interface Message {
   id: number;
@@ -23,7 +26,7 @@ export default function AiConsole(props: AiConsoleProps = {}) {
   const [messages, setMessages] = useState<Message[]>([
     { 
       id: 1, 
-      text: "System online. Hello, SIR. SMASH Cloud is now active and ready to assist you.", 
+      text: "System online. Hello, SIR. I am SMASH Beta 1, your advanced AI assistant with real intelligence. I have access to web information, system analysis, and adaptive reasoning. How may I assist you today?", 
       isUser: false,
       timestamp: new Date()
     }
@@ -33,6 +36,16 @@ export default function AiConsole(props: AiConsoleProps = {}) {
   const [isVoiceEnabled, setIsVoiceEnabled] = useState(true);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [selectedVoice, setSelectedVoice] = useState<SpeechSynthesisVoice | null>(null);
+  const [hasSpokenInitialGreeting, setHasSpokenInitialGreeting] = useState(() => {
+    // Check if we've already spoken the initial greeting in this browser session
+    // We'll use sessionStorage instead of localStorage so it resets when browser is closed
+    return sessionStorage.getItem('smash_initial_greeting_spoken') === 'true';
+  });
+  
+  // ElevenLabs integration state
+  const [voiceConfig, setVoiceConfig] = useState(() => getVoiceConfig());
+  const [useElevenLabs, setUseElevenLabs] = useState(() => isElevenLabsConfigured());
+  const [isElevenLabsLoading, setIsElevenLabsLoading] = useState(false);
   // Initialize state based on prop
   const initialTrainingState = defaultView === 'training';
   const initialChatState = defaultView === 'chat';
@@ -44,9 +57,9 @@ export default function AiConsole(props: AiConsoleProps = {}) {
   const [trainingData, setTrainingData] = useState<AITrainingData[]>([]);
   const [newTraining, setNewTraining] = useState({ question: '', answer: '', category: 'general' });
 
-  // Load conversation history from AI service
+  // Load conversation history from REAL AI service
   useEffect(() => {
-    const aiMessages = smashBeta1AI.getMessages();
+    const aiMessages = realAI.getMessages();
     if (aiMessages.length > 1) { // More than just system message
       const formattedMessages = aiMessages
         .filter(msg => msg.role !== 'system')
@@ -78,50 +91,76 @@ export default function AiConsole(props: AiConsoleProps = {}) {
         return;
       }
 
-      // Priority order for Jarvis-style male voices
+      // Enhanced priority for authentic Jarvis-style voices
       const jarvisVoiceNames = [
         'alex', 'daniel', 'tom', 'mark', 'david', 'john', 'mike', 'steve',
         'edward', 'richard', 'brian', 'chris', 'matt', 'james', 'paul',
-        'thomas', 'michael', 'robert', 'william', 'harry'
+        'thomas', 'michael', 'robert', 'william', 'harry', 'peter', 'benjamin',
+        'nicholas', 'charles', 'anthony', 'patrick', 'george', 'kevin'
       ];
+      
+      console.log('Available voices:', voices.map(v => `${v.name} (${v.lang})`));
       
       let jarvisVoice = null;
       
-      // First, try to find specific male Jarvis voices
-      for (const voiceName of jarvisVoiceNames) {
-        jarvisVoice = voices.find(voice => 
-          voice.name.toLowerCase().includes(voiceName) && 
-          voice.lang.startsWith('en')
-        );
-        if (jarvisVoice) break;
+      // First priority: find voices that sound like Jarvis (deeper, more sophisticated)
+      jarvisVoice = voices.find(voice => {
+        const name = voice.name.toLowerCase();
+        return jarvisVoiceNames.some(jName => name.includes(jName)) && 
+               voice.lang.startsWith('en') &&
+               (name.includes('premium') || name.includes('enhanced') || name.includes('pro'));
+      });
+      
+      // Second priority: specific jarvis names without premium but still good
+      if (!jarvisVoice) {
+        for (const voiceName of jarvisVoiceNames) {
+          jarvisVoice = voices.find(voice => 
+            voice.name.toLowerCase().includes(voiceName) && 
+            voice.lang.startsWith('en') &&
+            !voice.name.toLowerCase().includes('female') &&
+            !voice.name.toLowerCase().includes('woman')
+          );
+          if (jarvisVoice) break;
+        }
       }
       
-      // If no specific male voice found, try to find any male-sounding voice
+      // Third priority: any male voice excluding obvious female names
       if (!jarvisVoice) {
         jarvisVoice = voices.find(voice => {
           const name = voice.name.toLowerCase();
-          // Exclude female names
-          const isNotFemale = !name.includes('samantha') && 
-                            !name.includes('victoria') && 
-                            !name.includes('sarah') && 
-                            !name.includes('emma') && 
-                            !name.includes('susan') && 
-                            !name.includes('lisa') &&
-                            !name.includes('mary') &&
-                            !name.includes('jennifer') &&
-                            !name.includes('karen') &&
-                            !name.includes('amy') &&
-                            !name.includes('anna');
-          
-          return voice.lang.startsWith('en') && isNotFemale;
+          return voice.lang.startsWith('en') && 
+                 !name.includes('samantha') && 
+                 !name.includes('victoria') && 
+                 !name.includes('sarah') && 
+                 !name.includes('emma') && 
+                 !name.includes('susan') && 
+                 !name.includes('lisa') &&
+                 !name.includes('mary') &&
+                 !name.includes('jennifer') &&
+                 !name.includes('karen') &&
+                 !name.includes('amy') &&
+                 !name.includes('anna') &&
+                 !name.includes('female') &&
+                 !name.includes('woman');
         });
       }
       
-      // Last resort: find any English voice
+      // Fourth priority: Google voices (often better quality)
       if (!jarvisVoice) {
         jarvisVoice = voices.find(voice => 
-          voice.lang.startsWith('en') && voice.name.toLowerCase().includes('google')
-        ) || voices.find(voice => voice.lang.startsWith('en'));
+          voice.lang.startsWith('en') && 
+          voice.name.toLowerCase().includes('google') &&
+          !voice.name.toLowerCase().includes('female')
+        );
+      }
+      
+      // Last resort: any English voice that's not explicitly female
+      if (!jarvisVoice) {
+        jarvisVoice = voices.find(voice => 
+          voice.lang.startsWith('en') && 
+          !voice.name.toLowerCase().includes('female') &&
+          !voice.name.toLowerCase().includes('woman')
+        );
       }
       
       if (jarvisVoice) {
@@ -182,8 +221,8 @@ export default function AiConsole(props: AiConsoleProps = {}) {
     setMessages(prev => [...prev, userMsg]);
 
     try {
-      // Process with real AI service
-      const response = await smashBeta1AI.processMessage(userMessage);
+      // Process with REAL AI service for intelligent responses
+      const response = await realAI.processMessage(userMessage);
       
       // Add AI response
       const aiResponse: Message = {
@@ -236,7 +275,7 @@ export default function AiConsole(props: AiConsoleProps = {}) {
     // Could show a toast notification here
   };
 
-  // Function to speak AI responses
+  // Enhanced function to speak AI responses using ElevenLabs (Jarvis voice) with fallback
   const speakResponse = async (text: string) => {
     if (!isVoiceEnabled || !text.trim()) return;
     
@@ -248,129 +287,167 @@ export default function AiConsole(props: AiConsoleProps = {}) {
     }
     
     try {
-      // Use browser's built-in speech synthesis with better error handling
-      if ('speechSynthesis' in window) {
-        // Wait for voices to load
-        const waitForVoices = () => {
-          return new Promise<void>((resolve) => {
-            const voices = speechSynthesis.getVoices();
-            if (voices.length > 0) {
-              resolve();
-            } else {
-              speechSynthesis.addEventListener('voiceschanged', () => resolve(), { once: true });
-              // Fallback timeout
-              setTimeout(() => resolve(), 100);
-            }
-          });
-        };
+      // Try ElevenLabs first for authentic Jarvis voice
+      if (useElevenLabs && elevenLabsService.isConfigured()) {
+        console.log('🦾 Using ElevenLabs for authentic Jarvis voice...');
+        setIsElevenLabsLoading(true);
         
-        await waitForVoices();
-        
-        const utterance = new SpeechSynthesisUtterance(text);
-        
-        // Enhanced Jarvis-style voice settings for MALE voice
-        utterance.rate = 0.7;  // Slower, more deliberate delivery like Jarvis
-        utterance.pitch = 0.5; // Much lower pitch for deep masculine voice (0.0 to 2.0, where 1.0 is normal)
-        utterance.volume = 0.9; // High volume for clear speech
-        
-        // Use the pre-selected Jarvis voice
-        if (selectedVoice) {
-          utterance.voice = selectedVoice;
-          console.log('Using pre-selected Jarvis voice:', selectedVoice.name);
-        } else {
-          // Fallback: find a male voice on the fly
-          const voices = speechSynthesis.getVoices();
-          const jarvisVoiceNames = [
-            'alex', 'daniel', 'tom', 'mark', 'david', 'john', 'mike', 'steve',
-            'edward', 'richard', 'brian', 'chris', 'matt', 'james', 'paul'
-          ];
+        try {
+          // Use Jarvis-optimized settings
+          const jarvisSettings = voiceConfig.jarvisSettings;
+          await elevenLabsService.speak(text, jarvisSettings);
+          console.log('✅ ElevenLabs Jarvis voice completed successfully');
+        } catch (elevenLabsError) {
+          console.warn('⚠️ ElevenLabs failed, falling back to browser TTS:', elevenLabsError);
           
-          let fallbackVoice = voices.find(voice => {
-            const name = voice.name.toLowerCase();
-            return jarvisVoiceNames.some(jName => name.includes(jName)) && voice.lang.startsWith('en');
-          });
-          
-          if (!fallbackVoice) {
-            // Try to avoid female voices
-            fallbackVoice = voices.find(voice => {
-              const name = voice.name.toLowerCase();
-              const isNotFemale = !name.includes('samantha') && 
-                                !name.includes('victoria') && 
-                                !name.includes('sarah') && 
-                                !name.includes('emma') &&
-                                !name.includes('lisa') &&
-                                !name.includes('jennifer') &&
-                                !name.includes('karen');
-              return voice.lang.startsWith('en') && isNotFemale;
-            });
-          }
-          
-          if (fallbackVoice) {
-            utterance.voice = fallbackVoice;
-            console.log('Using fallback voice:', fallbackVoice.name);
+          // Fall back to browser TTS if ElevenLabs fails
+          if (voiceConfig.fallbackTts) {
+            await speakWithBrowserTTS(text);
           } else {
-            console.log('No suitable voice found, using system default');
+            throw elevenLabsError;
           }
+        } finally {
+          setIsElevenLabsLoading(false);
+          setIsSpeaking(false);
         }
-        
-        // Enhanced event handling
-        utterance.onstart = () => {
-          console.log('SMASH is speaking with voice:', utterance.voice?.name || 'default', '- Text:', text);
-        };
-        
-        utterance.onend = () => {
-          setIsSpeaking(false);
-          console.log('SMASH finished speaking');
-        };
-        
-        utterance.onerror = (event) => {
-          console.error('Speech error:', event.error);
-          setIsSpeaking(false);
-        };
-        
-        // Speak immediately
-        speechSynthesis.speak(utterance);
-        
       } else {
-        // Fallback to API-based TTS if speechSynthesis not available
-        console.log('Using API fallback for TTS');
-        const response = await fetch('/api/voice/speak', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ text: text }),
-        });
-
-        if (response.ok) {
-          const result = await response.json();
-          if (result.success && result.audio_url) {
-            const audio = new Audio(result.audio_url);
-            audio.onended = () => setIsSpeaking(false);
-            audio.onerror = () => setIsSpeaking(false);
-            await audio.play();
-          }
-        } else {
-          setIsSpeaking(false);
-        }
+        // Use browser TTS if ElevenLabs is not configured
+        console.log('🔄 Using browser TTS (ElevenLabs not configured)');
+        await speakWithBrowserTTS(text);
+        setIsSpeaking(false);
       }
     } catch (error) {
-      console.error('Speech synthesis error:', error);
+      console.error('❌ Speech synthesis error:', error);
       setIsSpeaking(false);
+      setIsElevenLabsLoading(false);
     }
   };
 
-  // Test voice on component mount - after speakResponse is defined
+  // Browser TTS fallback function with Jarvis-style settings
+  const speakWithBrowserTTS = async (text: string): Promise<void> => {
+    if (!('speechSynthesis' in window)) {
+      throw new Error('Speech synthesis not supported');
+    }
+
+    // Wait for voices to load
+    const waitForVoices = () => {
+      return new Promise<void>((resolve) => {
+        const voices = speechSynthesis.getVoices();
+        if (voices.length > 0) {
+          resolve();
+        } else {
+          speechSynthesis.addEventListener('voiceschanged', () => resolve(), { once: true });
+          // Fallback timeout
+          setTimeout(() => resolve(), 100);
+        }
+      });
+    };
+    
+    await waitForVoices();
+    
+    const utterance = new SpeechSynthesisUtterance(text);
+    
+    // Authentic Jarvis-style voice settings for deep, sophisticated male voice
+    utterance.rate = 0.65;  // Slower, more deliberate delivery
+    utterance.pitch = 0.3;  // Much deeper pitch for authentic Jarvis sound
+    utterance.volume = 0.95; // High volume for clear, authoritative speech
+    
+    // Use the pre-selected Jarvis voice or find a suitable male voice
+    if (selectedVoice) {
+      utterance.voice = selectedVoice;
+      console.log('🎤 Using pre-selected voice:', selectedVoice.name);
+    } else {
+      // Fallback: find a male voice on the fly
+      const voices = speechSynthesis.getVoices();
+      const jarvisVoiceNames = [
+        'alex', 'daniel', 'tom', 'mark', 'david', 'john', 'mike', 'steve',
+        'edward', 'richard', 'brian', 'chris', 'matt', 'james', 'paul'
+      ];
+      
+      let fallbackVoice = voices.find(voice => {
+        const name = voice.name.toLowerCase();
+        return jarvisVoiceNames.some(jName => name.includes(jName)) && voice.lang.startsWith('en');
+      });
+      
+      if (!fallbackVoice) {
+        // Try to avoid female voices
+        fallbackVoice = voices.find(voice => {
+          const name = voice.name.toLowerCase();
+          const isNotFemale = !name.includes('samantha') && 
+                            !name.includes('victoria') && 
+                            !name.includes('sarah') && 
+                            !name.includes('emma') &&
+                            !name.includes('lisa') &&
+                            !name.includes('jennifer') &&
+                            !name.includes('karen');
+          return voice.lang.startsWith('en') && isNotFemale;
+        });
+      }
+      
+      if (fallbackVoice) {
+        utterance.voice = fallbackVoice;
+        console.log('🎤 Using fallback voice:', fallbackVoice.name);
+      } else {
+        console.log('🎤 No suitable voice found, using system default');
+      }
+    }
+    
+    // Enhanced event handling
+    utterance.onstart = () => {
+      console.log('🗣️ SMASH is speaking:', utterance.voice?.name || 'default');
+    };
+    
+    utterance.onend = () => {
+      console.log('✅ SMASH finished speaking (browser TTS)');
+      setIsSpeaking(false);
+    };
+    
+    utterance.onerror = (event) => {
+      console.error('❌ Browser TTS error:', event.error);
+      setIsSpeaking(false);
+    };
+    
+    return new Promise((resolve, reject) => {
+      utterance.onend = () => {
+        console.log('✅ Browser TTS completed');
+        setIsSpeaking(false);
+        resolve();
+      };
+      
+      utterance.onerror = (event) => {
+        console.error('❌ Browser TTS error:', event.error);
+        setIsSpeaking(false);
+        reject(event.error);
+      };
+      
+      // Speak immediately
+      speechSynthesis.speak(utterance);
+    });
+  };
+
+  // Speak initial greeting only once when first opening the webpage
   useEffect(() => {
-    if (isVoiceEnabled && messages.length === 1 && messages[0].text.includes('System online')) {
-      // Test voice synthesis after a short delay to ensure voices are loaded
+    // Only speak if:
+    // 1. Voice is enabled
+    // 2. We haven't spoken the greeting yet
+    // 3. We have exactly one message (the initial greeting)
+    // 4. That message contains the system online text
+    if (isVoiceEnabled && 
+        !hasSpokenInitialGreeting && 
+        messages.length === 1 && 
+        messages[0]?.text.includes('System online')) {
+      
+      console.log('Speaking initial greeting for the first time');
+      // Test voice synthesis after a delay to ensure voices are loaded
       const timer = setTimeout(() => {
         speakResponse(messages[0].text);
-      }, 2000);
+        setHasSpokenInitialGreeting(true);
+        sessionStorage.setItem('smash_initial_greeting_spoken', 'true');
+      }, 3000); // Increased delay to ensure everything is ready
       
       return () => clearTimeout(timer);
     }
-  }, [isVoiceEnabled, messages.length]);
+  }, [isVoiceEnabled, hasSpokenInitialGreeting, messages.length]); // Simplified dependencies
 
   return (
     <div className="glass" style={{ 
@@ -401,9 +478,17 @@ export default function AiConsole(props: AiConsoleProps = {}) {
           </h3>
           <p style={{ fontSize: '12px', color: 'var(--text-secondary)', margin: 0 }}>
             {showTraining ? 'AI Training Center' : 'AI Assistant'} • Voice Enabled • Advanced Learning
-            {selectedVoice && (
+            {useElevenLabs && elevenLabsService.isConfigured() ? (
+              <span style={{ fontSize: '10px', color: '#00ff00', marginLeft: '8px' }}>
+                • 🦾 ElevenLabs Jarvis Voice
+              </span>
+            ) : selectedVoice ? (
               <span style={{ fontSize: '10px', color: 'var(--accent-primary)', marginLeft: '8px' }}>
                 • {selectedVoice.name}
+              </span>
+            ) : (
+              <span style={{ fontSize: '10px', color: '#ff8800', marginLeft: '8px' }}>
+                • Browser TTS
               </span>
             )}
           </p>
@@ -452,31 +537,56 @@ export default function AiConsole(props: AiConsoleProps = {}) {
           </div>
           
           {/* Voice Controls */}
-          <button
-            onClick={() => setIsVoiceEnabled(!isVoiceEnabled)}
-            style={{
-              width: '36px',
-              height: '36px',
-              borderRadius: '50%',
-              border: 'none',
-              backgroundColor: isVoiceEnabled ? 'var(--accent-bg)' : 'var(--input-bg)',
-              color: isVoiceEnabled ? 'var(--accent-primary)' : 'var(--text-muted)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              cursor: 'pointer',
-              transition: 'all 0.3s ease'
-            }}
-            title={isVoiceEnabled ? 'Voice enabled' : 'Voice disabled'}
-          >
-            {isVoiceEnabled && !isSpeaking ? (
-              <Volume2 style={{ width: '18px', height: '18px' }} />
-            ) : isSpeaking ? (
-              <Volume2 style={{ width: '18px', height: '18px', animation: 'pulse 1s infinite' }} />
-            ) : (
-              <VolumeX style={{ width: '18px', height: '18px' }} />
+          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+            {/* ElevenLabs Status Indicator */}
+            {useElevenLabs && (
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px',
+                padding: '4px 8px',
+                borderRadius: '6px',
+                backgroundColor: elevenLabsService.isConfigured() ? 'rgba(0, 255, 0, 0.1)' : 'rgba(255, 165, 0, 0.1)',
+                border: `1px solid ${elevenLabsService.isConfigured() ? 'rgba(0, 255, 0, 0.3)' : 'rgba(255, 165, 0, 0.3)'}`,
+                fontSize: '10px',
+                color: elevenLabsService.isConfigured() ? '#00aa00' : '#ff8800'
+              }}>
+                {elevenLabsService.isConfigured() ? '🦾 ElevenLabs' : '⚠️ Config'}
+              </div>
             )}
-          </button>
+            
+            <button
+              onClick={() => setIsVoiceEnabled(!isVoiceEnabled)}
+              style={{
+                width: '36px',
+                height: '36px',
+                borderRadius: '50%',
+                border: 'none',
+                backgroundColor: isVoiceEnabled ? 'var(--accent-bg)' : 'var(--input-bg)',
+                color: isVoiceEnabled ? 'var(--accent-primary)' : 'var(--text-muted)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+                transition: 'all 0.3s ease'
+              }}
+              title={
+                useElevenLabs && elevenLabsService.isConfigured() 
+                  ? 'Voice enabled - Using ElevenLabs Jarvis voice' 
+                  : isVoiceEnabled 
+                    ? 'Voice enabled - Using browser TTS' 
+                    : 'Voice disabled'
+              }
+            >
+              {isVoiceEnabled && !isSpeaking && !isElevenLabsLoading ? (
+                <Volume2 style={{ width: '18px', height: '18px' }} />
+              ) : isSpeaking || isElevenLabsLoading ? (
+                <Volume2 style={{ width: '18px', height: '18px', animation: 'pulse 1s infinite' }} />
+              ) : (
+                <VolumeX style={{ width: '18px', height: '18px' }} />
+              )}
+            </button>
+          </div>
           
           <VoiceMicButton 
             onTranscript={handleVoiceTranscript}

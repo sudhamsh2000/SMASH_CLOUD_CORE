@@ -1,9 +1,10 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Cpu, MemoryStick, HardDrive, FolderOpen, Bot, Settings, Clock, Activity, Cloud, Thermometer, Shield, Edit, Trash2, X, Monitor, Database, Bell, Palette, Wifi, Lock, Download, Upload, RefreshCw } from "lucide-react";
+import { Cpu, MemoryStick, HardDrive, FolderOpen, Bot, Settings, Clock, Activity, Cloud, Thermometer, Shield, Edit, Trash2, X, Monitor, Database, Bell, Palette, Wifi, Lock, Download, Upload, RefreshCw, User as UserIcon, ChevronDown, LogOut } from "lucide-react";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
-// import { authService } from "./lib/auth";
+import { authService, type User } from "./lib/auth";
 import { fileDatabaseService } from "./lib/fileDatabase";
+import LoginScreen from "./components/LoginScreen";
 
 // FileItem interface
 interface FileItem {
@@ -20,12 +21,25 @@ interface FileItem {
 import AdminPanel from "./components/AdminPanel";
 import AiConsole from "./components/AiConsole";
 
-// Mock data functions
+// Stable stats generation
+let baseStats = {
+  cpu: 25,
+  ram: 52,
+  disk: 12
+};
+
 function generateRandomStats() {
+  // Add small realistic variations
+  const cpuVariation = (Math.random() - 0.5) * 6; // +/- 3%
+  const ramVariation = (Math.random() - 0.5) * 8; // +/- 4%
+  
+  baseStats.cpu = Math.max(15, Math.min(35, baseStats.cpu + cpuVariation));
+  baseStats.ram = Math.max(40, Math.min(65, baseStats.ram + ramVariation));
+  
   return {
-    cpu: Math.floor(Math.random() * 20) + 15,
-    ram: Math.floor(Math.random() * 15) + 45,
-    disk: 12
+    cpu: Math.floor(baseStats.cpu),
+    ram: Math.floor(baseStats.ram),
+    disk: baseStats.disk
   };
 }
 
@@ -136,7 +150,30 @@ function Logo({ theme }: { theme: string }) {
 }
 
 // TopBar Component
-function TopBar({ onShowAdmin, theme }: { onShowAdmin: () => void; theme: string }) {
+function TopBar({ onShowAdmin, theme, currentUser, onLogout }: { 
+  onShowAdmin: () => void; 
+  theme: string; 
+  currentUser: User | null;
+  onLogout: () => void;
+}) {
+  const [showUserDropdown, setShowUserDropdown] = useState(false);
+  const canAccessAdmin = currentUser?.role === 'admin' || currentUser?.permissions.includes('admin');
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (showUserDropdown) {
+        const target = event.target as Element;
+        if (!target.closest('[data-dropdown]')) {
+          setShowUserDropdown(false);
+        }
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showUserDropdown]);
+  
   return (
     <div style={{ 
       display: 'flex', 
@@ -151,38 +188,163 @@ function TopBar({ onShowAdmin, theme }: { onShowAdmin: () => void; theme: string
       </div>
       
       <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-        <button
-          onClick={onShowAdmin}
-          style={{
-            backgroundColor: 'var(--accent-bg)',
-            border: 'none',
-            borderRadius: '8px',
-            padding: '8px 16px',
-            color: 'var(--text-primary)',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            cursor: 'pointer',
-            fontSize: '14px'
-          }}
-        >
-          <Shield style={{ width: '16px', height: '16px' }} />
-          Admin Panel
-        </button>
-        <div style={{ fontSize: '14px', color: 'var(--text-secondary)' }}>
-          <div style={{ fontWeight: '500' }}>Admin User</div>
-          <div style={{ fontSize: '12px' }}>admin@smash.cloud</div>
-        </div>
-        <div style={{ 
-          width: '40px', 
-          height: '40px', 
-          background: 'linear-gradient(135deg, #ef4444, #ec4899)', 
-          borderRadius: '50%', 
-          display: 'flex', 
-          alignItems: 'center', 
-          justifyContent: 'center'
-        }}>
-          <Shield style={{ width: '20px', height: '20px', color: 'var(--text-primary)' }} />
+        {canAccessAdmin && (
+          <button
+            onClick={onShowAdmin}
+            style={{
+              background: 'linear-gradient(135deg, rgba(0, 255, 255, 0.2), rgba(0, 204, 255, 0.15))',
+              border: '1px solid rgba(0, 255, 255, 0.3)',
+              borderRadius: '12px',
+              padding: '10px 16px',
+              color: 'white',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              cursor: 'pointer',
+              fontSize: '14px',
+              fontWeight: '500',
+              transition: 'all 0.2s ease'
+            }}
+            onMouseOver={(e) => {
+              e.currentTarget.style.background = 'linear-gradient(135deg, rgba(0, 255, 255, 0.3), rgba(0, 204, 255, 0.25))';
+              e.currentTarget.style.borderColor = 'rgba(0, 255, 255, 0.5)';
+            }}
+            onMouseOut={(e) => {
+              e.currentTarget.style.background = 'linear-gradient(135deg, rgba(0, 255, 255, 0.2), rgba(0, 204, 255, 0.15))';
+              e.currentTarget.style.borderColor = 'rgba(0, 255, 255, 0.3)';
+            }}
+          >
+            <Shield style={{ width: '16px', height: '16px' }} />
+            Admin Panel
+          </button>
+        )}
+        
+        {/* User Dropdown */}
+        <div style={{ position: 'relative' }} data-dropdown>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <div style={{ fontSize: '14px', color: 'var(--text-secondary)', textAlign: 'right' }}>
+              <div style={{ fontWeight: '500', color: 'var(--text-primary)' }}>{currentUser?.username || 'Guest'}</div>
+              <div style={{ fontSize: '12px' }}>{currentUser?.email || ''}</div>
+            </div>
+            <button
+              onClick={() => setShowUserDropdown(!showUserDropdown)}
+              style={{ 
+                width: '44px', 
+                height: '44px', 
+                background: currentUser?.role === 'admin' 
+                  ? 'linear-gradient(135deg, rgba(239, 68, 68, 0.8), rgba(220, 38, 38, 0.6))' 
+                  : 'linear-gradient(135deg, rgba(0, 204, 255, 0.8), rgba(59, 130, 246, 0.6))', 
+                borderRadius: '50%', 
+                border: '2px solid rgba(255, 255, 255, 0.2)',
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'center',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease',
+                position: 'relative'
+              }}
+              onMouseOver={(e) => {
+                e.currentTarget.style.transform = 'scale(1.05)';
+                e.currentTarget.style.boxShadow = '0 4px 20px rgba(255, 255, 255, 0.2)';
+              }}
+              onMouseOut={(e) => {
+                e.currentTarget.style.transform = 'scale(1)';
+                e.currentTarget.style.boxShadow = 'none';
+              }}
+            >
+              <UserIcon style={{ width: '20px', height: '20px', color: 'white' }} />
+              <ChevronDown 
+                style={{ 
+                  width: '12px', 
+                  height: '12px', 
+                  color: 'white', 
+                  position: 'absolute',
+                  bottom: '4px',
+                  right: '4px'
+                }} 
+              />
+            </button>
+          </div>
+
+          {/* Dropdown Menu */}
+          {showUserDropdown && (
+            <motion.div
+              initial={{ opacity: 0, y: -10, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -10, scale: 0.95 }}
+              transition={{ duration: 0.2 }}
+              style={{
+                position: 'absolute',
+                top: '100%',
+                right: '0',
+                marginTop: '8px',
+                background: 'linear-gradient(135deg, rgba(10, 15, 30, 0.95), rgba(26, 32, 50, 0.98))',
+                border: '1px solid rgba(0, 255, 255, 0.2)',
+                borderRadius: '16px',
+                padding: '12px',
+                minWidth: '200px',
+                backdropFilter: 'blur(20px)',
+                boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.1)',
+                zIndex: 1000
+              }}
+            >
+              <div style={{ padding: '8px 12px', borderBottom: '1px solid rgba(255, 255, 255, 0.1)' }}>
+                <div style={{ fontSize: '14px', fontWeight: '600', color: 'white', marginBottom: '4px' }}>
+                  {currentUser?.username}
+                </div>
+                <div style={{ fontSize: '12px', color: '#9ca3af' }}>
+                  {currentUser?.email}
+                </div>
+                <div style={{
+                  display: 'inline-block',
+                  marginTop: '8px',
+                  padding: '4px 8px',
+                  borderRadius: '12px',
+                  fontSize: '11px',
+                  fontWeight: '600',
+                  backgroundColor: currentUser?.role === 'admin' 
+                    ? 'rgba(239, 68, 68, 0.2)' 
+                    : 'rgba(0, 204, 255, 0.2)',
+                  color: currentUser?.role === 'admin' ? '#ef4444' : '#00ccff',
+                  border: `1px solid ${currentUser?.role === 'admin' ? 'rgba(239, 68, 68, 0.3)' : 'rgba(0, 204, 255, 0.3)'}`
+                }}>
+                  {currentUser?.role?.toUpperCase() || 'USER'}
+                </div>
+              </div>
+              
+              <button
+                onClick={() => {
+                  setShowUserDropdown(false);
+                  onLogout();
+                }}
+                style={{
+                  width: '100%',
+                  padding: '12px',
+                  borderRadius: '12px',
+                  border: 'none',
+                  background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.2), rgba(220, 38, 38, 0.15))',
+                  color: 'white',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  transition: 'all 0.2s ease',
+                  marginTop: '8px'
+                }}
+                onMouseOver={(e) => {
+                  e.currentTarget.style.background = 'linear-gradient(135deg, rgba(239, 68, 68, 0.3), rgba(220, 38, 38, 0.25))';
+                }}
+                onMouseOut={(e) => {
+                  e.currentTarget.style.background = 'linear-gradient(135deg, rgba(239, 68, 68, 0.2), rgba(220, 38, 38, 0.15))';
+                }}
+              >
+                <LogOut style={{ width: '16px', height: '16px' }} />
+                Sign Out
+              </button>
+            </motion.div>
+          )}
         </div>
       </div>
     </div>
@@ -330,7 +492,7 @@ function StoragePie({ diskUsed }: { diskUsed: number }) {
 }
 
 // File Manager Component with Real-time Database
-function FileManager() {
+function FileManager({ currentUser }: { currentUser: User | null }) {
   const [files, setFiles] = useState<FileItem[]>([]);
   const [selectedFile, setSelectedFile] = useState<string | null>(null);
   const [editingFile, setEditingFile] = useState<string | null>(null);
@@ -338,6 +500,11 @@ function FileManager() {
   const [viewingFile, setViewingFile] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [fileStats, setFileStats] = useState({ totalFiles: 0, totalSize: '0 GB', files: 0, folders: 0 });
+
+  // Permission helpers
+  const canUpload = currentUser?.permissions.includes('write') || currentUser?.role === 'admin';
+  const canEdit = currentUser?.permissions.includes('write') || currentUser?.role === 'admin';
+  const canDelete = currentUser?.permissions.includes('delete') || currentUser?.role === 'admin';
 
   // Subscribe to real-time file updates
   useEffect(() => {
@@ -369,9 +536,15 @@ function FileManager() {
     const file = event.target.files?.[0];
     if (!file) return;
 
+    if (!canUpload) {
+      alert('You do not have permission to upload files.');
+      event.target.value = '';
+      return;
+    }
+
     setIsUploading(true);
     try {
-      await fileDatabaseService.uploadFile(file, 'admin@smash.cloud');
+      await fileDatabaseService.uploadFile(file, currentUser?.email || 'unknown@smash.cloud');
       console.log(`✅ File uploaded successfully: ${file.name}`);
     } catch (error) {
       console.error('❌ Upload failed:', error);
@@ -384,6 +557,11 @@ function FileManager() {
   };
 
   const handleDeleteFile = async (id: string) => {
+    if (!canDelete) {
+      alert('You do not have permission to delete files.');
+      return;
+    }
+
     if (confirm('Are you sure you want to delete this file?')) {
       const success = fileDatabaseService.deleteFile(id);
       if (success) {
@@ -397,6 +575,11 @@ function FileManager() {
   };
 
   const handleEditFile = (id: string) => {
+    if (!canEdit) {
+      alert('You do not have permission to edit files.');
+      return;
+    }
+
     const file = files.find(f => f.id === id);
     if (file) {
       setEditName(file.name);
@@ -405,6 +588,11 @@ function FileManager() {
   };
 
   const handleSaveEdit = async () => {
+    if (!canEdit) {
+      alert('You do not have permission to edit files.');
+      return;
+    }
+
     if (editName.trim() && editingFile) {
       const success = fileDatabaseService.updateFile(editingFile, { name: editName.trim() });
       if (success) {
@@ -505,34 +693,38 @@ function FileManager() {
               <span style={{ fontSize: '12px' }}>Uploading...</span>
             </div>
           )}
-          <input
-            type="file"
-            id="file-upload"
-            onChange={handleFileUpload}
-            style={{ display: 'none' }}
-            disabled={isUploading}
-          />
-          <label
-            htmlFor="file-upload"
-            className="glass-hover"
-            style={{
-              backgroundColor: isUploading ? 'var(--accent-bg)' : 'var(--accent-bg)',
-              border: '1px solid var(--accent-primary)',
-              borderRadius: '8px',
-              padding: '10px 16px',
-              color: 'var(--text-primary)',
-              cursor: isUploading ? 'not-allowed' : 'pointer',
-              fontSize: '14px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              fontWeight: '500',
-              opacity: isUploading ? 0.6 : 1
-            }}
-          >
-            <Cloud style={{ width: '16px', height: '16px' }} />
-            {isUploading ? 'Uploading...' : 'Upload File'}
-          </label>
+          {canUpload && (
+            <>
+              <input
+                type="file"
+                id="file-upload"
+                onChange={handleFileUpload}
+                style={{ display: 'none' }}
+                disabled={isUploading}
+              />
+              <label
+                htmlFor="file-upload"
+                className="glass-hover"
+                style={{
+                  backgroundColor: isUploading ? 'var(--accent-bg)' : 'var(--accent-bg)',
+                  border: '1px solid var(--accent-primary)',
+                  borderRadius: '8px',
+                  padding: '10px 16px',
+                  color: 'var(--text-primary)',
+                  cursor: isUploading ? 'not-allowed' : 'pointer',
+                  fontSize: '14px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  fontWeight: '500',
+                  opacity: isUploading ? 0.6 : 1
+                }}
+              >
+                <Cloud style={{ width: '16px', height: '16px' }} />
+                {isUploading ? 'Uploading...' : 'Upload File'}
+              </label>
+            </>
+          )}
         </div>
       </div>
 
@@ -658,53 +850,57 @@ function FileManager() {
                     View
                   </button>
                   
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleEditFile(file.id);
-                    }}
-                    style={{
-                      backgroundColor: 'rgba(59, 130, 246, 0.8)',
-                      border: 'none',
-                      borderRadius: '6px',
-                      padding: '6px 8px',
-                      color: 'white',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      fontSize: '11px',
-                      fontWeight: '500'
-                    }}
-                    title="Edit"
-                  >
-                    <Edit style={{ width: '12px', height: '12px', marginRight: '4px' }} />
-                    Edit
-                  </button>
+                  {canEdit && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleEditFile(file.id);
+                      }}
+                      style={{
+                        backgroundColor: 'rgba(59, 130, 246, 0.8)',
+                        border: 'none',
+                        borderRadius: '6px',
+                        padding: '6px 8px',
+                        color: 'white',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: '11px',
+                        fontWeight: '500'
+                      }}
+                      title="Edit"
+                    >
+                      <Edit style={{ width: '12px', height: '12px', marginRight: '4px' }} />
+                      Edit
+                    </button>
+                  )}
                   
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleDeleteFile(file.id);
-                    }}
-                    style={{
-                      backgroundColor: 'rgba(239, 68, 68, 0.8)',
-                      border: 'none',
-                      borderRadius: '6px',
-                      padding: '6px 8px',
-                      color: 'white',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      fontSize: '11px',
-                      fontWeight: '500'
-                    }}
-                    title="Delete"
-                  >
-                    <Trash2 style={{ width: '12px', height: '12px', marginRight: '4px' }} />
-                    Del
-                  </button>
+                  {canDelete && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeleteFile(file.id);
+                      }}
+                      style={{
+                        backgroundColor: 'rgba(239, 68, 68, 0.8)',
+                        border: 'none',
+                        borderRadius: '6px',
+                        padding: '6px 8px',
+                        color: 'white',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: '11px',
+                        fontWeight: '500'
+                      }}
+                      title="Delete"
+                    >
+                      <Trash2 style={{ width: '12px', height: '12px', marginRight: '4px' }} />
+                      Del
+                    </button>
+                  )}
                 </div>
               )}
             </motion.div>
@@ -1654,6 +1850,8 @@ export default function App() {
   const [currentView, setCurrentView] = useState('dashboard');
   const [showAdminPanel, setShowAdminPanel] = useState(false);
   const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   
   // Settings state for real-time updates
   const [settings, setSettings] = useState({
@@ -1684,7 +1882,7 @@ export default function App() {
     showUptime: true
   });
 
-  // Load settings from localStorage on mount
+  // Load settings from localStorage on mount and check authentication
   useEffect(() => {
     const savedSettings = localStorage.getItem('smashSettings');
     if (savedSettings) {
@@ -1695,6 +1893,11 @@ export default function App() {
         console.error('Failed to load settings:', error);
       }
     }
+
+    // Check if user is already logged in
+    const user = authService.getCurrentUser();
+    setCurrentUser(user);
+    setIsLoading(false);
   }, []);
 
   // Apply theme changes in real-time
@@ -1752,22 +1955,73 @@ export default function App() {
     }
   }, [notification]);
 
+  // Authentication handlers
+  const handleLogin = (user: User) => {
+    setCurrentUser(user);
+  };
+
+  const handleLogout = async () => {
+    await authService.logout();
+    setCurrentUser(null);
+    setShowAdminPanel(false);
+    setNotification({ 
+      message: 'Logged out successfully', 
+      type: 'success' 
+    });
+  };
+
+  // Navigation handler that closes admin panel when switching views
+  const handleViewChange = (view: string) => {
+    console.log('Navigating to:', view);
+    setCurrentView(view);
+    setShowAdminPanel(false); // Close admin panel when navigating
+  };
+
+  // Show loading screen while checking authentication
+  if (isLoading) {
+    return (
+      <div style={{ 
+        minHeight: '100vh',
+        background: 'linear-gradient(135deg, #0A0F1E 0%, #1a2332 100%)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        color: 'white'
+      }}>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ fontSize: '32px', marginBottom: '16px' }}>SMASH Cloud</div>
+          <div style={{ fontSize: '16px', color: '#9ca3af' }}>Loading...</div>
+        </div>
+      </div>
+    );
+  }
+
+  // Show login screen if user is not authenticated
+  if (!currentUser) {
+    return <LoginScreen onLogin={handleLogin} />;
+  }
+
   return (
     <div style={{ minHeight: '100vh' }}>
       <div style={{ display: 'flex', height: '100vh' }}>
         {/* Sidebar */}
         <div style={{ width: '72px', flexShrink: 0 }}>
-          <Sidebar currentView={currentView} onViewChange={setCurrentView} />
+          <Sidebar currentView={currentView} onViewChange={handleViewChange} />
         </div>
 
         {/* Main Content */}
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '24px' }}>
-          <TopBar onShowAdmin={() => setShowAdminPanel(true)} theme={settings.theme} />
+          <TopBar 
+            onShowAdmin={() => setShowAdminPanel(true)} 
+            theme={settings.theme} 
+            currentUser={currentUser}
+            onLogout={handleLogout}
+          />
           
-          {showAdminPanel ? (
+          {showAdminPanel && (currentUser?.role === 'admin' || currentUser?.permissions.includes('admin')) ? (
             <AdminPanel onClose={() => setShowAdminPanel(false)} />
           ) : currentView === 'files' ? (
-            <FileManager />
+            <FileManager currentUser={currentUser} />
           ) : currentView === 'ai' ? (
             <div style={{ flex: 1, height: '100%' }}>
               <AiConsole defaultView="training" />
