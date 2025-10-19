@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { User as UserIcon, UserPlus, UserMinus, Edit, Shield, Mail, Calendar, Activity, Trash2, Save, X } from "lucide-react";
-import { userDB, User, authService } from "../lib/auth";
+import { userDB, authService } from "../lib/auth";
 
 interface AdminPanelProps {
   onClose: () => void;

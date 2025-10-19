@@ -1,171 +1,153 @@
-import { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { Send, Bot, User as UserIcon } from "lucide-react";
-import { ChatMessage, getRandomResponse } from "../lib/mock";
+import React, { useState } from 'react';
+import { motion } from 'framer-motion';
+import { Bot, Send, User as UserIcon } from 'lucide-react';
 
 export default function AiConsole() {
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    {
-      id: "1",
-      text: "Hello! I'm your SMASH Cloud AI assistant. How can I help you today?",
-      isUser: false,
-      timestamp: new Date(),
-    },
+  const [messages, setMessages] = useState([
+    { id: 1, text: "Hello! I'm SMASH Beta 1, your AI assistant. How can I help you today?", isUser: false }
   ]);
   const [input, setInput] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
 
-  const handleSend = async () => {
+  const handleSend = () => {
     if (!input.trim()) return;
 
-    const userMessage: ChatMessage = {
-      id: Date.now().toString(),
-      text: input,
-      isUser: true,
-      timestamp: new Date(),
-    };
-
-    setMessages(prev => [...prev, userMessage]);
+    const newMessage = { id: messages.length + 1, text: input, isUser: true };
+    setMessages([...messages, newMessage]);
     setInput("");
-    setIsLoading(true);
 
-    // Simulate AI response delay
+    // Simulate AI response
     setTimeout(() => {
-      const aiMessage: ChatMessage = {
-        id: (Date.now() + 1).toString(),
-        text: getRandomResponse(),
-        isUser: false,
-        timestamp: new Date(),
+      const responses = [
+        "I'm SMASH Beta 1, your advanced AI assistant! I can help you with cloud management, file operations, and system monitoring.",
+        "Your SMASH Cloud is running optimally! All systems are green and ready for use.",
+        "I'm constantly learning from our conversations to better assist you with your cloud needs.",
+        "Welcome to your fresh SMASH Cloud installation. Everything looks great!",
+        "I can help you manage files, monitor system performance, and configure your cloud settings.",
+        "Your server uptime is excellent at 99.9%. Keep up the great maintenance!",
+        "I notice your CPU usage is normal. Everything looks good from here.",
+        "Your cloud security is up to date. No vulnerabilities detected.",
+        "Your storage is at 12% usage - perfect for a fresh installation!",
+        "I've optimized your cloud performance. You should see improved speeds."
+      ];
+      const aiResponse = { 
+        id: messages.length + 2, 
+        text: responses[Math.floor(Math.random() * responses.length)], 
+        isUser: false 
       };
-      setMessages(prev => [...prev, aiMessage]);
-      setIsLoading(false);
-    }, 1000 + Math.random() * 1000);
-  };
-
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      handleSend();
-    }
+      setMessages(prev => [...prev, aiResponse]);
+    }, 1000);
   };
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5, delay: 0.4 }}
-      className="glass card-hover"
-      style={{ padding: '24px', display: 'flex', flexDirection: 'column', height: '384px' }}
-    >
-      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
-        <div style={{ 
-          width: '32px', 
-          height: '32px', 
-          background: 'linear-gradient(135deg, #00FFFF, #3b82f6)', 
-          borderRadius: '8px', 
-          display: 'flex', 
-          alignItems: 'center', 
-          justifyContent: 'center' 
+    <div className="glass" style={{ padding: '24px', height: '100%', display: 'flex', flexDirection: 'column' }}>
+      {/* Header */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
+        <div style={{
+          width: '40px',
+          height: '40px',
+          borderRadius: '12px',
+          backgroundColor: 'var(--accent-bg)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center'
         }}>
-          <Bot style={{ width: '16px', height: '16px', color: 'white' }} />
+          <Bot style={{ width: '20px', height: '20px', color: 'var(--accent-primary)' }} />
         </div>
-        <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#d1d5db', margin: 0 }}>AI Console</h3>
+        <div>
+          <h3 style={{ fontSize: '18px', fontWeight: '600', color: 'var(--text-primary)', margin: 0 }}>
+            SMASH Beta 1
+          </h3>
+          <p style={{ fontSize: '12px', color: 'var(--text-secondary)', margin: 0 }}>
+            AI Assistant • Advanced Training Enabled
+          </p>
+        </div>
       </div>
 
-      <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '16px' }}>
-        <AnimatePresence>
-          {messages.map((message) => (
-            <motion.div
-              key={message.id}
-              initial={{ opacity: 0, x: message.isUser ? 20 : -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0 }}
-              style={{ display: 'flex', justifyContent: message.isUser ? 'flex-end' : 'flex-start' }}
-            >
-              <div
-                style={{
-                  maxWidth: '288px',
-                  padding: '16px',
-                  borderRadius: '16px',
-                  backgroundColor: message.isUser ? 'rgba(0, 255, 255, 0.2)' : 'rgba(55, 65, 81, 0.5)',
-                  color: message.isUser ? 'white' : '#d1d5db'
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                  {message.isUser ? (
-                    <UserIcon style={{ width: '12px', height: '12px' }} />
-                  ) : (
-                    <Bot style={{ width: '12px', height: '12px' }} />
-                  )}
-                  <span style={{ fontSize: '12px', opacity: 0.7 }}>
-                    {message.isUser ? "You" : "AI"}
-                  </span>
-                </div>
-                <p style={{ fontSize: '14px', margin: 0 }}>{message.text}</p>
-              </div>
-            </motion.div>
-          ))}
-        </AnimatePresence>
-        
-        {isLoading && (
+      {/* Messages */}
+      <div style={{ flex: 1, overflowY: 'auto', marginBottom: '16px', paddingRight: '8px' }}>
+        {messages.map((message) => (
           <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            style={{ display: 'flex', justifyContent: 'flex-start' }}
+            key={message.id}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            style={{
+              display: 'flex',
+              alignItems: 'flex-start',
+              gap: '12px',
+              marginBottom: '16px',
+              flexDirection: message.isUser ? 'row-reverse' : 'row'
+            }}
           >
-            <div style={{ backgroundColor: 'rgba(55, 65, 81, 0.5)', color: '#d1d5db', padding: '16px', borderRadius: '16px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <Bot style={{ width: '12px', height: '12px' }} />
-                <span style={{ fontSize: '12px', opacity: 0.7 }}>AI</span>
-              </div>
-              <div style={{ display: 'flex', gap: '4px', marginTop: '4px' }}>
-                <div style={{ width: '8px', height: '8px', backgroundColor: '#9ca3af', borderRadius: '50%', animation: 'bounce 1s infinite' }} />
-                <div style={{ width: '8px', height: '8px', backgroundColor: '#9ca3af', borderRadius: '50%', animation: 'bounce 1s infinite 0.1s' }} />
-                <div style={{ width: '8px', height: '8px', backgroundColor: '#9ca3af', borderRadius: '50%', animation: 'bounce 1s infinite 0.2s' }} />
-              </div>
+            <div style={{
+              width: '32px',
+              height: '32px',
+              borderRadius: '50%',
+              backgroundColor: message.isUser ? 'rgba(59, 130, 246, 0.2)' : 'var(--accent-bg)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexShrink: 0
+            }}>
+              {message.isUser ? (
+                <UserIcon style={{ width: '16px', height: '16px', color: '#3b82f6' }} />
+              ) : (
+                <Bot style={{ width: '16px', height: '16px', color: 'var(--accent-primary)' }} />
+              )}
+            </div>
+            
+            <div style={{
+              backgroundColor: message.isUser ? 'rgba(59, 130, 246, 0.1)' : 'var(--bg-glass-hover)',
+              borderRadius: '12px',
+              padding: '12px 16px',
+              maxWidth: '80%',
+              wordWrap: 'break-word',
+              border: '1px solid var(--border-primary)'
+            }}>
+              <p style={{ margin: 0, fontSize: '14px', color: 'var(--text-primary)', lineHeight: '1.5' }}>
+                {message.text}
+              </p>
             </div>
           </motion.div>
-        )}
+        ))}
       </div>
 
+      {/* Input Area */}
       <div style={{ display: 'flex', gap: '8px' }}>
         <input
           type="text"
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          onKeyPress={handleKeyPress}
-          placeholder="Ask me anything about your cloud..."
+          onKeyPress={(e) => e.key === 'Enter' && handleSend()}
+          placeholder="Ask SMASH Beta 1 anything..."
           style={{
             flex: 1,
-            backgroundColor: 'rgba(55, 65, 81, 0.5)',
-            border: '1px solid #4b5563',
+            backgroundColor: 'var(--input-bg)',
+            border: '1px solid var(--input-border)',
             borderRadius: '12px',
-            padding: '8px 16px',
-            color: 'white',
+            padding: '12px 16px',
+            color: 'var(--text-primary)',
             fontSize: '14px'
           }}
-          disabled={isLoading}
         />
         <button
           onClick={handleSend}
-          disabled={!input.trim() || isLoading}
+          disabled={!input.trim()}
           style={{
-            width: '40px',
-            height: '40px',
-            backgroundColor: 'rgba(0, 255, 255, 0.2)',
-            border: 'none',
+            backgroundColor: input.trim() ? 'var(--accent-primary)' : 'var(--input-bg)',
+            border: input.trim() ? 'none' : '1px solid var(--input-border)',
             borderRadius: '12px',
+            padding: '12px',
+            color: input.trim() ? 'white' : 'var(--text-muted)',
+            cursor: input.trim() ? 'pointer' : 'not-allowed',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            cursor: !input.trim() || isLoading ? 'not-allowed' : 'pointer',
-            opacity: !input.trim() || isLoading ? 0.5 : 1,
-            transition: 'all 0.2s ease'
+            transition: 'all 0.3s ease'
           }}
         >
-          <Send style={{ width: '16px', height: '16px', color: '#00FFFF' }} />
+          <Send style={{ width: '16px', height: '16px' }} />
         </button>
       </div>
-    </motion.div>
+    </div>
   );
 }
