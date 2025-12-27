@@ -3,6 +3,7 @@ Database models and initialization for SMASH Cloud Voice AI
 Adaptive learning and conversation history storage
 """
 
+# Database models and ORM setup
 from sqlalchemy import create_engine, Column, Integer, String, Text, DateTime, Float, Boolean
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, Session

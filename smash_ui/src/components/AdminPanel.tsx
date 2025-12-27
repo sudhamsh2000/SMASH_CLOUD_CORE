@@ -1,3 +1,4 @@
+// Admin panel component for user and system management
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { 

@@ -2,6 +2,7 @@
 Configuration management for SMASH Cloud Voice AI
 """
 
+# Configuration module for environment variables and settings
 import os
 from typing import Optional
 try:

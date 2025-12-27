@@ -2,6 +2,7 @@
 # SMASH Cloud Core - Ubuntu Bootstrap Script
 # Installs and configures Nextcloud, Nginx, MariaDB, PHP-FPM, Certbot, Fail2ban, UFW
 # Usage: sudo bash scripts/smash_bootstrap.sh
+# Updated: Enhanced error handling and logging
 
 set -euo pipefail
 

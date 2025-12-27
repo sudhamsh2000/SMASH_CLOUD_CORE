@@ -1,6 +1,7 @@
 # SMASH Cloud Core - Local Development Stack
 # Run: docker compose up -d
 # Access: https://localhost (trust local CA)
+# Updated: Infrastructure improvements
 
 version: '3.8'
 

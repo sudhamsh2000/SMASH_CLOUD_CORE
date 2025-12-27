@@ -1,3 +1,4 @@
+// Main application component
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Cpu, MemoryStick, HardDrive, FolderOpen, Bot, Settings, Clock, Activity, Cloud, Thermometer, Shield, Edit, Trash2, X, Monitor, Database, Bell, Palette, Wifi, Lock, Download, Upload, RefreshCw, User as UserIcon, ChevronDown, LogOut } from "lucide-react";

@@ -2,6 +2,7 @@
 System management routes for SMASH Cloud Voice AI
 """
 
+# System status and health check endpoints
 from fastapi import APIRouter, HTTPException, Depends
 from typing import Dict, List
 import asyncio

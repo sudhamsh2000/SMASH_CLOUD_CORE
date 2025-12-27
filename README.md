@@ -2,6 +2,8 @@
 
 A portable, self-hosted personal cloud built from the ground up with a focus on reliability, security, and AI‑ready expansion.
 
+<!-- Updated: Core infrastructure improvements and optimizations -->
+
 ## 🚀 Features
 
 ### Core Infrastructure

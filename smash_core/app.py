@@ -3,6 +3,7 @@ SMASH Cloud Voice AI - Jarvis Style Assistant
 Real-time voice interaction with adaptive learning capabilities
 """
 
+# Main application entry point
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect, File, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles

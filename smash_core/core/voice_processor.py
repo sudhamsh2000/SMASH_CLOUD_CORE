@@ -2,6 +2,7 @@
 Voice Processing Core - Real-time STT/TTS with Jarvis voice
 """
 
+# Voice processing and audio stream handling
 import asyncio
 import io
 import uuid

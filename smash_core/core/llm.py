@@ -2,6 +2,7 @@
 LLM Brain - Jarvis-style AI responses with adaptive learning
 """
 
+# LLM processing and conversation management
 import httpx
 import json
 from typing import Dict, List, Optional, Tuple

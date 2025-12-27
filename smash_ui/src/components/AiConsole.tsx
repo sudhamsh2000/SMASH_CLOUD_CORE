@@ -1,3 +1,4 @@
+// AI console component for chat and training
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Bot, Send, User as UserIcon, Volume2, VolumeX, BookOpen, Trash2, Settings } from 'lucide-react';

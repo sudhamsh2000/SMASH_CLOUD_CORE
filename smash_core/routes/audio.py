@@ -2,6 +2,7 @@
 Audio processing routes for STT/TTS operations
 """
 
+# Audio transcription and synthesis endpoints
 from fastapi import APIRouter, File, UploadFile, HTTPException
 from typing import Dict
 import httpx

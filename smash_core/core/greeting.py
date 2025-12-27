@@ -2,6 +2,7 @@
 Startup greeting system for SMASH Cloud Voice AI
 """
 
+# Startup greeting and initialization
 import asyncio
 from typing import Optional
 

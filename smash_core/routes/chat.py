@@ -2,6 +2,7 @@
 Chat API routes for SMASH Cloud Voice AI
 """
 
+# Chat endpoint handlers
 from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel
 from typing import Optional, Dict
