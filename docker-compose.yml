@@ -1,0 +1,90 @@
+# SMASH Cloud — local development stack
+#   docker compose up -d --build     then open http://localhost:8080
+# Every port binds to 127.0.0.1 so nothing is exposed to your network.
+
+name: smash-cloud
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg17
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      # Host side is 5433 (5432 is often taken by another local Postgres). Containers
+      # still reach it as postgres:5432 on the internal network; this mapping is only
+      # for connecting from your Mac, e.g.  psql -h 127.0.0.1 -p 5433 -U smash smash
+      - "127.0.0.1:5433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  smash-api:
+    build: ./services/smash-api
+    restart: unless-stopped
+    env_file: .env
+
+  friday:
+    build: ./friday
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"   # lets FRIDAY reach Ollama running on the host
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  veronica:
+    build: ./veronica
+    restart: unless-stopped
+    environment:
+      SMASH_JWT_SECRET: ${SMASH_JWT_SECRET}
+    volumes:
+      # Training runs natively on the Mac (GPU) and writes here; the API only reads.
+      - ./veronica/runs:/srv/runs:ro
+      - ./veronica/data/gutenberg/tokenizer.json:/srv/data/gutenberg/tokenizer.json:ro
+
+  backup:
+    image: pgvector/pgvector:pg17   # same image as the database, so pg_dump matches its version
+    restart: unless-stopped
+    entrypoint: ["/bin/sh", "/backup-loop.sh"]
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_DB: ${POSTGRES_DB}
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+      BACKUP_INTERVAL_HOURS: ${BACKUP_INTERVAL_HOURS:-6}
+      BACKUP_KEEP: ${BACKUP_KEEP:-28}
+    volumes:
+      - ./infrastructure/backup/backup-loop.sh:/backup-loop.sh:ro
+      - ./backups:/backups          # a host folder, NOT a Docker volume: survives Docker resets
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  dashboard:
+    build: ./apps/dashboard
+    restart: unless-stopped
+
+  gateway:
+    image: caddy:2
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8080:80"
+    volumes:
+      - ./infrastructure/gateway/Caddyfile:/etc/caddy/Caddyfile:ro
+    depends_on:
+      - smash-api
+      - friday
+      - veronica
+      - dashboard
+
+volumes:
+  postgres_data:

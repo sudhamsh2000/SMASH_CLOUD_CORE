@@ -1,0 +1,23 @@
+# SMASH Cloud gateway: the single entry point. Routes by path to each service.
+# Later this is where domains, subdomains and automatic HTTPS get configured.
+:80 {
+	encode gzip
+
+	handle /api/friday/* {
+		# flush_interval -1 streams FRIDAY's replies token-by-token instead of buffering
+		reverse_proxy friday:8000 {
+			flush_interval -1
+		}
+	}
+	handle /api/veronica/* {
+		reverse_proxy veronica:8000 {
+			flush_interval -1
+		}
+	}
+	handle /api/* {
+		reverse_proxy smash-api:8000
+	}
+	handle {
+		reverse_proxy dashboard:80
+	}
+}
